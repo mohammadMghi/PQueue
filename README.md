@@ -1,44 +1,322 @@
 # PQueue
-PQueue is a job queue system with php for educational purpose
+PQueue is a job queue system with PHP for educational purposes, built with modern design patterns and best practices.
 
-## Run
+## 🏗️ Architecture & Design Patterns
+
+This project implements several design patterns following SOLID principles:
+
+### Design Patterns Used
+
+1. **Dependency Injection Container** - Service Locator Pattern
+   - Manages dependencies and provides automatic dependency resolution
+   - Located in `src/Support/Container.php`
+
+2. **Repository Pattern**
+   - Abstracts data access layer
+   - Interface: `src/Contracts/RepositoryInterface.php`
+   - Implementation: `src/Repository/JobRepository.php`
+
+3. **Strategy Pattern**
+   - Queue interface allows different implementations (Database, Redis, etc.)
+   - Interface: `src/Contracts/QueueInterface.php`
+   - Implementation: `src/Queue/DatabaseQueue.php`
+
+4. **Factory Pattern**
+   - Creates job instances from class names or serialized data
+   - Located in `src/Jobs/JobFactory.php`
+
+5. **Template Method Pattern**
+   - BaseJob provides template structure for all jobs
+   - Located in `src/Jobs/BaseJob.php`
+
+6. **Observer Pattern**
+   - Event system for job lifecycle events
+   - Interface: `src/Contracts/EventDispatcherInterface.php`
+   - Implementation: `src/Events/EventDispatcher.php`
+
+7. **Singleton Pattern**
+   - Used for Logger and Config services
+   - Located in `src/Support/Logger.php` and `src/Support/Config.php`
+
+8. **Command Pattern**
+   - Jobs implement Command pattern (JobInterface)
+   - Located in `src/Contracts/JobInterface.php`
+
+9. **Service Layer Pattern**
+   - Business logic separated into service classes
+   - `src/Service/JobProcessor.php` and `src/Service/WorkerService.php`
+
+10. **Facade Pattern**
+    - Application class provides simplified interface
+    - Located in `src/Application.php`
+
+## 📁 Project Structure
+
 ```
-    php Worker.php
-```
-```
-    php Enqueue.php
+JobQueueSystem/
+├── src/
+│   ├── Contracts/          # Interfaces (Strategy, Repository, etc.)
+│   ├── Jobs/              # Job classes and factory
+│   ├── Queue/             # Queue implementations
+│   ├── Repository/        # Data access layer
+│   ├── Events/            # Event system
+│   ├── Exceptions/        # Custom exceptions
+│   ├── Service/           # Business logic services
+│   ├── Support/           # Utilities (Container, Logger, Config)
+│   ├── Console/           # CLI utilities
+│   └── Application.php    # Main application facade
+├── examples/              # Usage examples
+├── bootstrap.php          # Application bootstrap
+├── config.php             # Configuration
+├── Worker.php             # Worker entry point
+├── Enqueue.php            # Enqueue entry point
+└── composer.json          # Composer configuration
 ```
 
-## Params
-Run with a queue name, if you don't pass this param it run default queue
-```
-    php Worker --queue-name="queue_name"
+## ✨ Features
+
+- ✅ **SOLID Principles** - Clean, maintainable architecture
+- ✅ **Dependency Injection** - Automatic dependency resolution
+- ✅ **Queue Abstraction** - Easy to swap implementations (Database, Redis, etc.)
+- ✅ **Event System** - Listen to job lifecycle events
+- ✅ **Template Method** - BaseJob provides job structure
+- ✅ **Repository Pattern** - Clean data access layer
+- ✅ **Type Safety** - Full type hints (PHP 8.0+)
+- ✅ **Error Handling** - Custom exceptions and proper error management
+- ✅ **Logging** - Comprehensive logging system
+- ✅ **Configuration** - Centralized configuration management
+
+## 🚀 Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   composer install
+   ```
+3. Set up your database and create the jobs table (see SQL schema below)
+4. Configure database credentials in `config.php` or use environment variables
+
+## ⚙️ Configuration
+
+Database credentials can be configured in `config.php` or via environment variables:
+- `DB_HOST` - Database host (default: localhost)
+- `DB_NAME` - Database name (default: test)
+- `DB_USER` - Database username (default: root)
+- `DB_PASSWORD` - Database password
+
+Queue settings can be configured in `config.php`:
+- `default_queue` - Default queue name
+- `max_attempts` - Maximum retry attempts (default: 3)
+- `retry_delay` - Delay between retries in seconds (default: 1)
+
+## 📊 Database Schema
+
+```sql
+CREATE TABLE jobs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  queue VARCHAR(255) DEFAULT 'default',
+  payload TEXT NOT NULL,
+  attempts INT DEFAULT 0,
+  priority INT DEFAULT 0, -- higher = more urgent
+  status ENUM('pending', 'processing', 'success', 'failed') DEFAULT 'pending',
+  available_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  reserved_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-Run specific job with id 
-```
-    php Worker.php --id=1 --tries=1
+## 📖 Usage
+
+### Enqueue a Job
+
+```php
+php Enqueue.php
 ```
 
-Done application after job become empty
-```
-    php Worker.php --stop-when-empty
-```
-Run jobs every specific time
-```
-    php Worker.php --run-every=1
+Or programmatically:
+
+```php
+$app = require 'bootstrap.php';
+$queue = $app->queue();
+
+$job = new \PQueue\Jobs\SendEmailJob("user@example.com", "Welcome!");
+$queue->push($job, 'default', 1);
 ```
 
+### Run Worker
 
-## Job
-Inside Enqueue.php you can define your job First part is your job class and second is queue name and last is priority If you want to run this queue you have to pass queue name to CLI argument
+Start the worker to process jobs:
 
+```bash
+php Worker.php
 ```
-    $job = new SendEmailJob("user@example.com", "Welcome!");
-    $queue->push($job , 'queue_name',1);
-```
-Run 
 
+### Worker Parameters
+
+**Run with a specific queue name:**
+```bash
+php Worker.php --queue-name="queue_name"
 ```
-    php Worker.php --queue-name=queue_name
+
+**Run a specific job by ID:**
+```bash
+php Worker.php --id=1 --tries=3
 ```
+
+**Stop when queue is empty:**
+```bash
+php Worker.php --stop-when-empty
+```
+
+**Set polling interval (seconds):**
+```bash
+php Worker.php --run-every=2
+```
+
+## 🎯 Creating Custom Jobs
+
+### Option 1: Implement JobInterface
+
+```php
+<?php
+
+use PQueue\Contracts\JobInterface;
+
+class MyCustomJob implements JobInterface {
+    public function handle(): void {
+        // Your job logic here
+        // Throw an exception if the job fails
+    }
+}
+```
+
+### Option 2: Extend BaseJob (Recommended)
+
+```php
+<?php
+
+use PQueue\Jobs\BaseJob;
+
+class ProcessPaymentJob extends BaseJob {
+    protected int $maxAttempts = 5; // Override default
+    protected int $timeout = 120;   // 2 minutes
+
+    public function __construct(
+        private int $userId,
+        private float $amount
+    ) {}
+
+    protected function before(): void {
+        // Called before execution
+        echo "Preparing payment...\n";
+    }
+
+    protected function execute(): void {
+        // Main job logic
+        // This is where your work happens
+    }
+
+    protected function after(): void {
+        // Called after execution
+        echo "Payment completed!\n";
+    }
+}
+```
+
+See `examples/CustomJob.php` for a complete example.
+
+## 🎪 Event System
+
+The event system (Observer Pattern) allows you to listen to job lifecycle events:
+
+```php
+$app = require 'bootstrap.php';
+$events = $app->events();
+
+// Listen to events
+$events->listen('job.processing', function(array $payload) {
+    echo "Job #{$payload['job_id']} is starting...\n";
+});
+
+$events->listen('job.processed', function(array $payload) {
+    echo "Job #{$payload['job_id']} completed!\n";
+});
+
+$events->listen('job.failed', function(array $payload) {
+    echo "Job #{$payload['job_id']} failed: {$payload['error']}\n";
+});
+
+$events->listen('job.failed_permanently', function(array $payload) {
+    echo "Job #{$payload['job_id']} permanently failed!\n";
+});
+```
+
+See `examples/EventListeners.php` for a complete example.
+
+Available Events:
+- `job.processing` - Fired when job starts processing
+- `job.processed` - Fired when job completes successfully
+- `job.failed` - Fired when job fails (will retry)
+- `job.failed_permanently` - Fired when job exceeds max attempts
+
+## 📝 Logging
+
+All worker activities are logged to `queue.log` and also displayed in the console. Log levels include:
+- `DEBUG` - Debug information
+- `INFO` - Successful job processing
+- `WARNING` - Job failures that will be retried
+- `ERROR` - Permanent job failures
+
+## 🔧 Extending the System
+
+### Adding a New Queue Implementation
+
+Implement `QueueInterface`:
+
+```php
+use PQueue\Contracts\QueueInterface;
+use PQueue\Contracts\JobInterface;
+
+class RedisQueue implements QueueInterface {
+    // Implement all interface methods
+}
+```
+
+Then register it in `Application.php` bootstrap.
+
+### Adding Custom Exceptions
+
+Create custom exceptions in `src/Exceptions/`:
+
+```php
+namespace PQueue\Exceptions;
+
+class MyCustomException extends \Exception {
+    // Your custom exception
+}
+```
+
+## 🏆 Best Practices
+
+1. **Always extend BaseJob** for new jobs to leverage the Template Method pattern
+2. **Use type hints** everywhere for better IDE support and type safety
+3. **Listen to events** for monitoring and logging
+4. **Use dependency injection** through the Application facade
+5. **Follow SOLID principles** when extending the system
+
+## 📚 Design Pattern Benefits
+
+- **Dependency Injection**: Easy testing, loose coupling
+- **Repository Pattern**: Easy to swap database implementations
+- **Strategy Pattern**: Support multiple queue backends
+- **Template Method**: Consistent job structure
+- **Observer Pattern**: Flexible event handling
+- **Factory Pattern**: Centralized object creation
+
+## 🔄 Migration from Old Version
+
+The new architecture is backward compatible. The entry points (`Worker.php`, `Enqueue.php`) maintain the same CLI interface, but now use the improved architecture internally.
+
+## 📄 License
+
+This project is for educational purposes.

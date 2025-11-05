@@ -1,0 +1,14 @@
+{
+    "name": "pqueue/job-queue-system",
+    "description": "A simple job queue system for PHP - educational purpose",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PQueue\\": "src/"
+        }
+    }
+}
+
