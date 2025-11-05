@@ -12,28 +12,49 @@ $db = new DB($pdo);
 $countExisted = $db->count(); 
 
 $args = parseCommandArgs($argv);
-$retry     = $args['retry']     ?? 0;
+$tries     = $args['tries']     ?? 1;
 $id        = $args['id']     ?? null;
 $runEvery  = $args['run-every'] ?? 1;
 $queueName = $args['queue-name'] ?? 'default';
 $stopWhenEmpty = $args['stop-when-empty'] ?? false;
  
 // run job with id
-if ($retry && $id) {
+if ($tries && $id) {
     $jobData = $db->get($id);
-    if ($jobData) {
-        $job = unserialize(base64_decode($jobData['payload']));
+
+    if (!$jobData) {
+        echo "Job not found!\n";
+        return;
+    }
+
+    $job = unserialize(base64_decode($jobData['payload']));
+
+    $attempt = 0;
+    $success = false;
+
+    while ($attempt < $tries && !$success) {
         try {
-            $job->handle();
-            $queue->delete($jobData['id']);
-            echo "Processed job #{$jobData['id']}\n";
+            run($job, $queue, $jobData);
+            $success = true;  
         } catch (Exception $e) {
-            $queue->markJobAsFailed($jobData['id']);
+            $attempt++;
+            echo "Attempt {$attempt} failed: {$e->getMessage()}\n";
+ 
+            if ($attempt >= $tries) {
+                $queue->markJobAsFailed($jobData['id']);
+                echo "Job #{$jobData['id']} permanently failed after {$tries} tries.\n";
+            } else { 
+                sleep(1);
+            }
         }
-    } else {
-        print("Job not found!");
     } 
     return;
+}
+
+function run($job, $queue, $jobData) {
+    $job->handle();
+    $queue->delete($jobData['id']);
+    echo "Processed job #{$jobData['id']}\n";
 }
 
 
