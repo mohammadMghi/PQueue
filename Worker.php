@@ -18,7 +18,6 @@ $runEvery  = $args['run-every'] ?? 1;
 $queueName = $args['queue-name'] ?? 'default';
 $stopWhenEmpty = $args['stop-when-empty'] ?? false;
  
- 
 // run job with id
 if ($retry && $id) {
     $jobData = $db->get($id);
