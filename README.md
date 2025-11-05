@@ -17,7 +17,7 @@ Run with a queue name, if you don't pass this param it run default queue
 
 Run specific job with id 
 ```
-    php Worker.php --id=1 --retry
+    php Worker.php --id=1 --tries=1
 ```
 
 Done application after job become empty
