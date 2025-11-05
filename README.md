@@ -5,6 +5,9 @@ PQueue is a job queue system with php for educational purpose
 ```
     php Worker.php
 ```
+```
+    php Enqueue.php
+```
 
 ## Params
 Run with a queue name, if you don't pass this param it run default queue
@@ -14,12 +17,12 @@ Run with a queue name, if you don't pass this param it run default queue
 
 Run specific job with id 
 ```
-    php Worker --id=1 --retry
+    php Worker.php --id=1 --retry
 ```
 
 Done application after job become empty
 ```
-    php Worker --stop-when-empty
+    php Worker.php --stop-when-empty
 ```
 
 ## Job
