@@ -24,6 +24,11 @@ Done application after job become empty
 ```
     php Worker.php --stop-when-empty
 ```
+Run jobs every specific time
+```
+    php Worker.php --run-every=1
+```
+
 
 ## Job
 Inside Enqueue.php you can define your job First part is your job class and second is queue name and last is priority If you want to run this queue you have to pass queue name to CLI argument
